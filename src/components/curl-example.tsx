@@ -17,6 +17,17 @@ export function CurlExample({ projectId }: CurlExampleProps) {
     queryFn: () => axios.get<string>('/api/ip').then((res) => res.data),
   })
 
+  const { data: project } = useQuery({
+    queryKey: ['projects', projectId],
+    queryFn: () =>
+      axios.get<Project>(`/api/projects/${projectId}`).then((res) => res.data),
+  })
+
+  const projectRecord = project as unknown as Record<string, string> | undefined
+  const isLogglyConfigured = Boolean(
+    projectRecord && projectRecord.logglySubdomain && projectRecord.logglyToken,
+  )
+
   // Helpers
   const curlCommand = useMemo(
     () =>
@@ -32,6 +43,29 @@ export function CurlExample({ projectId }: CurlExampleProps) {
     [ip, projectId],
   )
 
+  if (isLogglyConfigured) {
+    return (
+      <div className="p-6 flex-1 flex justify-center items-center flex-col gap-4">
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-2">
+            <p className="text-xl font-medium">
+              Loggly is configured
+            </p>
+            <p className="text-base text-muted-foreground">
+              Click the &quot;Sync from Loggly&quot; button in the header to
+              fetch and archive your logs locally. Logs are stored in PostgreSQL
+              so you have unlimited history beyond Loggly&apos;s 30-day
+              retention.
+            </p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            You can also still send logs directly via the POST API.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   if (!curlCommand) {
     return null
   }
@@ -40,9 +74,10 @@ export function CurlExample({ projectId }: CurlExampleProps) {
     <div className="p-6 flex-1 flex justify-center items-center flex-col gap-4">
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
-          <p className="text-xl font-medium">Let's send your first log</p>
+          <p className="text-xl font-medium">Let&apos;s get started</p>
           <p className="text-base text-muted-foreground">
-            To start ingesting logs, you can start by using the cURL command
+            Configure Loggly via the settings menu (&hellip;) to sync logs from
+            your Loggly account, or send logs directly with the cURL command
             below.
           </p>
         </div>

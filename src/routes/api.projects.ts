@@ -19,6 +19,9 @@ export const Route = createFileRoute('/api/projects')({
         const project = await prisma.project.create({
           data: {
             title: body.title,
+            logglySubdomain: body.logglySubdomain || null,
+            logglyToken: body.logglyToken || null,
+            logglyTag: body.logglyTag || null,
           },
         })
 

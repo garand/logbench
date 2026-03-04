@@ -1,6 +1,14 @@
-import { PrismaLibSql } from '@prisma/adapter-libsql'
 import { PrismaClient } from '../../generated/prisma/client'
 
-const adapter = new PrismaLibSql({ url: 'file:./dev.db' })
+let _prisma: PrismaClient | undefined
 
-export const prisma = new PrismaClient({ adapter })
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    if (!_prisma) {
+      _prisma = new PrismaClient({
+        datasourceUrl: process.env.DATABASE_URL,
+      })
+    }
+    return Reflect.get(_prisma, prop)
+  },
+})

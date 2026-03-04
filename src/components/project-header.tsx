@@ -1,8 +1,14 @@
-import { RiClipboardLine, RiMoreLine, RiSearchLine } from '@remixicon/react'
+import {
+  RiClipboardLine,
+  RiLoopLeftLine,
+  RiMoreLine,
+  RiSearchLine,
+  RiSettings3Line,
+} from '@remixicon/react'
 import { useHotkey } from '@tanstack/react-hotkeys'
 import Mark from 'mark.js'
 import { useMemo, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { toast } from 'sonner'
 import {
@@ -26,6 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
+import { LogglySettings } from './loggly-settings'
 import type { Project } from 'generated/prisma/browser'
 import { Route } from '@/routes/projects.$projectId.route'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -38,11 +45,36 @@ export function ProjectHeader() {
   const { projectId } = Route.useParams()
 
   // Server state
+  const queryClient = useQueryClient()
+
   const { data: project } = useQuery({
     queryKey: ['projects', projectId],
     queryFn: () =>
       axios.get<Project>(`/api/projects/${projectId}`).then((res) => res.data),
   })
+
+  const { mutate: syncLogs, isPending: isSyncing } = useMutation({
+    mutationFn: () =>
+      axios
+        .post(`/api/projects/${projectId}/logs/sync`, {})
+        .then((res) => res.data),
+    onSuccess: (res: { synced: number }) => {
+      toast.success(`Synced ${res.synced} log(s) from Loggly`)
+      queryClient.invalidateQueries({
+        queryKey: ['projects', projectId, 'logs'],
+      })
+    },
+    onError: () => {
+      toast.error('Failed to sync logs from Loggly')
+    },
+  })
+
+  const isLogglyConfigured = Boolean(
+    project &&
+      'logglySubdomain' in project &&
+      (project as Record<string, unknown>).logglySubdomain &&
+      (project as Record<string, unknown>).logglyToken,
+  )
 
   // Refs
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -57,6 +89,7 @@ export function ProjectHeader() {
 
   // Local state
   const [matchCount, setMatchCount] = useState<number>()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-6 border-b px-4 sticky top-0 bg-background z-10">
@@ -104,6 +137,18 @@ export function ProjectHeader() {
           </InputGroupAddon>
         </InputGroup>
 
+        {isLogglyConfigured && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isSyncing}
+            onClick={() => syncLogs()}
+          >
+            <RiLoopLeftLine className={isSyncing ? 'animate-spin' : ''} />
+            {isSyncing ? 'Syncing...' : 'Sync from Loggly'}
+          </Button>
+        )}
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="icon" variant="ghost">
@@ -130,9 +175,19 @@ export function ProjectHeader() {
               <RiClipboardLine />
               Copy POST URL
             </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
+              <RiSettings3Line />
+              Loggly Settings
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <LogglySettings
+        projectId={projectId}
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+      />
     </header>
   )
 }
