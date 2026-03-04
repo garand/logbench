@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from './ui/button'
 import type { Project } from 'generated/prisma/browser'
 import { copyToClipboard } from '@/lib/clipboard'
+import { isLogglyConfigured } from '@/lib/utils'
 
 type CurlExampleProps = {
   projectId: Project['id']
@@ -23,10 +24,7 @@ export function CurlExample({ projectId }: CurlExampleProps) {
       axios.get<Project>(`/api/projects/${projectId}`).then((res) => res.data),
   })
 
-  const projectRecord = project as unknown as Record<string, string> | undefined
-  const isLogglyConfigured = Boolean(
-    projectRecord && projectRecord.logglySubdomain && projectRecord.logglyToken,
-  )
+  const logglyConfigured = isLogglyConfigured(project)
 
   // Helpers
   const curlCommand = useMemo(
@@ -43,7 +41,7 @@ export function CurlExample({ projectId }: CurlExampleProps) {
     [ip, projectId],
   )
 
-  if (isLogglyConfigured) {
+  if (logglyConfigured) {
     return (
       <div className="p-6 flex-1 flex justify-center items-center flex-col gap-4">
         <div className="flex flex-col gap-8">

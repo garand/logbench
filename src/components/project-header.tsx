@@ -36,6 +36,7 @@ import { LogglySettings } from './loggly-settings'
 import type { Project } from 'generated/prisma/browser'
 import { Route } from '@/routes/projects.$projectId.route'
 import { copyToClipboard } from '@/lib/clipboard'
+import { isLogglyConfigured } from '@/lib/utils'
 
 export function ProjectHeader() {
   // Helpers
@@ -69,12 +70,7 @@ export function ProjectHeader() {
     },
   })
 
-  const isLogglyConfigured = Boolean(
-    project &&
-      'logglySubdomain' in project &&
-      (project as Record<string, unknown>).logglySubdomain &&
-      (project as Record<string, unknown>).logglyToken,
-  )
+  const logglyConfigured = isLogglyConfigured(project)
 
   // Refs
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -137,7 +133,7 @@ export function ProjectHeader() {
           </InputGroupAddon>
         </InputGroup>
 
-        {isLogglyConfigured && (
+        {logglyConfigured && (
           <Button
             size="sm"
             variant="outline"

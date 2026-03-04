@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { toast } from 'sonner'
@@ -42,13 +42,13 @@ export function LogglySettings({
   const [tag, setTag] = useState('')
 
   // Sync form state when project data loads
-  const [initialized, setInitialized] = useState(false)
-  if (project && !initialized) {
-    setSubdomain(projectRecord?.logglySubdomain ?? '')
-    setToken(projectRecord?.logglyToken ?? '')
-    setTag(projectRecord?.logglyTag ?? '')
-    setInitialized(true)
-  }
+  useEffect(() => {
+    if (projectRecord) {
+      setSubdomain(projectRecord.logglySubdomain || '')
+      setToken(projectRecord.logglyToken || '')
+      setTag(projectRecord.logglyTag || '')
+    }
+  }, [projectRecord?.logglySubdomain, projectRecord?.logglyToken, projectRecord?.logglyTag])
 
   const { mutate: saveSettings, isPending } = useMutation({
     mutationFn: () =>
