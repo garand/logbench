@@ -19,6 +19,27 @@ export const Route = createFileRoute('/api/projects/$projectId')({
           },
         })
       },
+      PATCH: async ({ request, params }) => {
+        const { projectId } = params
+        const body = await request.json()
+
+        const data: Record<string, unknown> = {}
+        if (typeof body.title === 'string') data.title = body.title
+        if (typeof body.logglySubdomain === 'string') data.logglySubdomain = body.logglySubdomain || null
+        if (typeof body.logglyToken === 'string') data.logglyToken = body.logglyToken || null
+        if (typeof body.logglyTag === 'string') data.logglyTag = body.logglyTag || null
+
+        const project = await prisma.project.update({
+          where: { id: projectId },
+          data,
+        })
+
+        return new Response(JSON.stringify(project), {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+      },
     },
   },
 })

@@ -9,3 +9,9 @@ export function cn(...inputs: Array<ClassValue>) {
 export function isObject(value: unknown) {
   return typeof value === 'object' && value !== null
 }
+
+export function isLogglyConfigured(project: unknown): boolean {
+  if (!project || typeof project !== 'object') return false
+  const record = project as Record<string, unknown>
+  return Boolean(record.logglySubdomain && record.logglyToken)
+}
