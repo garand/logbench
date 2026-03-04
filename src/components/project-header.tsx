@@ -7,7 +7,7 @@ import {
 } from '@remixicon/react'
 import { useHotkey } from '@tanstack/react-hotkeys'
 import Mark from 'mark.js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { toast } from 'sonner'
@@ -72,34 +72,29 @@ export function ProjectHeader() {
 
   const logglyConfigured = isLogglyConfigured(project)
 
-  // Auto-sync from Loggly every 5 minutes when configured
-  const SYNC_INTERVAL_MS = 5 * 60 * 1000
+  // Auto-sync from Loggly every 60 seconds when credentials are configured
+  const autoSync = useCallback(async () => {
+    if (!logglyConfigured) return
+    try {
+      const res = await axios
+        .post(`/api/projects/${projectId}/logs/sync`, {})
+        .then((r) => r.data as { synced: number })
+      if (res.synced > 0) {
+        queryClient.invalidateQueries({
+          queryKey: ['projects', projectId, 'logs'],
+        })
+      }
+    } catch {
+      // Silently ignore auto-sync failures
+    }
+  }, [logglyConfigured, projectId, queryClient])
+
   useEffect(() => {
     if (!logglyConfigured) return
-
-    const sync = () => {
-      axios
-        .post(`/api/projects/${projectId}/logs/sync`, {})
-        .then((res) => {
-          const { synced } = res.data as { synced: number }
-          if (synced > 0) {
-            toast.success(`Auto-synced ${synced} new log(s) from Loggly`)
-            queryClient.invalidateQueries({
-              queryKey: ['projects', projectId, 'logs'],
-            })
-          }
-        })
-        .catch(() => {
-          // Silently ignore auto-sync errors to avoid spamming toasts
-        })
-    }
-
-    // Initial sync on page load
-    sync()
-
-    const intervalId = setInterval(sync, SYNC_INTERVAL_MS)
-    return () => clearInterval(intervalId)
-  }, [logglyConfigured, projectId, queryClient])
+    autoSync()
+    const interval = setInterval(autoSync, 60_000)
+    return () => clearInterval(interval)
+  }, [logglyConfigured, autoSync])
 
   // Refs
   const searchInputRef = useRef<HTMLInputElement>(null)
